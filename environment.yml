@@ -1,0 +1,13 @@
+name: restaurant-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - sqlite
+  - pip:
+      - fastapi
+      - uvicorn
+      - openai
+      - requests
