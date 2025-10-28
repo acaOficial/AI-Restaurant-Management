@@ -1,83 +1,81 @@
 import os
-import re
 import json
-import requests
 from openai import OpenAI
+import requests
+from datetime import date
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 MCP_BASE = "http://localhost:8000"
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
-def extract_info(user_msg: str):
-    """Extrae invitados y ubicación"""
-    guests = None
-    match = re.search(r"(\d+)\s*(personas|comensales)", user_msg.lower())
-    if match:
-        guests = int(match.group(1))
+def extract_from_llm(user_msg: str):
+    """
+    Usa GPT para extraer datos estructurados desde un mensaje de cliente.
+    """
+    prompt = f"""
+    Analiza el siguiente mensaje de un cliente que desea hacer una reserva en un restaurante.
+    Devuelve ÚNICAMENTE un JSON con los siguientes campos (sin texto adicional):
 
-    if "terraza" in user_msg.lower():
-        location = "terrace"
-    elif "interior" in user_msg.lower():
-        location = "interior"
-    else:
-        location = None
+    - name: nombre completo del cliente (string o null)
+    - guests: número de personas (entero o null)
+    - location: 'interior', 'terraza' o null
+    - date: fecha de la reserva (YYYY-MM-DD o null)
+    - time: hora de la reserva (HH:MM o null)
 
-    return guests, location
+    Mensaje del cliente:
+    \"\"\"{user_msg}\"\"\"
+    """
 
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "Eres un asistente que convierte texto en JSON estructurado."},
+            {"role": "user", "content": prompt},
+        ],
+        response_format={"type": "json_object"},
+    )
+    print("LLM response:", response.choices[0].message.content)
 
-def extract_name(user_msg: str):
-    """Extrae nombre si aparece en 'soy X' o 'a nombre de X'"""
-    text = user_msg.strip()
-
-    p1 = re.search(r"soy ([A-Za-zÁÉÍÓÚáéíóúñÑ ]+)", text, re.IGNORECASE)
-    if p1:
-        return p1.group(1).strip()
-
-    p2 = re.search(r"a nombre de ([A-Za-zÁÉÍÓÚáéíóúñÑ ]+)", text, re.IGNORECASE)
-    if p2:
-        return p2.group(1).strip()
-
-    return None
+    return json.loads(response.choices[0].message.content)
 
 
 def receptionist(user_msg: str):
+    """
+    Usa el LLM para extraer información y luego llama a la MCP (API) para hacer la reserva.
+    """
 
-    # Extraer datos básicos
-    guests, location = extract_info(user_msg)
-    name = extract_name(user_msg)
+    data = extract_from_llm(user_msg)
 
-    # Si faltan datos → pedir
-    if not guests or not location or not name:
+    name = data.get("name")
+    guests = data.get("guests")
+    location = data.get("location")
+    date_str = data.get("date") or str(date.today())
+    time = data.get("time") or "20:00"
+
+    if not all([name, guests, location]):
         return (
-            "Para procesar tu reserva necesito:\n"
-            "- Nombre (ej: 'Soy Juan Pérez')\n"
-            "- Número de personas (ej: '3 personas')\n"
-            "- Zona (terraza o interior)\n"
+            "Necesito algunos datos para confirmar tu reserva:\n"
+            "- Nombre\n- Número de personas\n- Zona (interior o terraza)\n"
+            "Por favor, proporciónalos todos en un solo mensaje."
         )
 
-    # Encontrar mesa disponible
-    r = requests.get(f"{MCP_BASE}/findTable?guests={guests}&location={location}")
+    # Buscar mesa
+    r = requests.get(f"{MCP_BASE}/findTable", params={"guests": guests, "location": location})
     table = r.json()
 
     if not table:
-        return (
-            f"No hay mesas disponibles para {guests} personas en {location}. "
-            "¿Deseas interior o cambiar horario?"
-        )
+        return f"No hay mesas disponibles para {guests} personas en {location}."
 
     table_id = table[0]["id"]
 
     # Reservar
-    date = "2025-10-29"   # para demo
-    time = "20:00"        # para demo
-
     reserve_resp = requests.post(
         f"{MCP_BASE}/reserveTable",
         params={
             "table_id": table_id,
             "name": name,
             "guests": guests,
-            "date": date,
+            "date": date_str,
             "time": time,
         },
     )
@@ -86,8 +84,8 @@ def receptionist(user_msg: str):
         return (
             f"✅ ¡Reserva confirmada!\n"
             f"Mesa {table_id} para {guests} personas en {location}.\n"
-            f"Fecha: {date} a las {time}\n"
-            f"A nombre de {name}.\n"
+            f"Fecha: {date_str} a las {time}\n"
+            f"A nombre de {name}."
         )
 
     return "❌ Error al registrar la reserva."
