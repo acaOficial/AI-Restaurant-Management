@@ -13,7 +13,7 @@ tools = [
     }
 ]
 
-user_message = "Hola, soy Aitor Tilla. Queremos reservar una mesa para 4 personas en interior mañana a las 23:00."
+user_message = "Hola, soy Ana. Queremos reservar una mesa para 4 personas en interior mañana a las 23:00."
 
 print("Enviando mensaje al modelo...\n")
 
