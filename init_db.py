@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS reservations (
     guests INTEGER,
     date TEXT,
     time TEXT,
+    phone TEXT,
+    duration INTEGER,
     FOREIGN KEY(table_id) REFERENCES tables(id)
 )
 """)
