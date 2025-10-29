@@ -15,3 +15,5 @@ class Reservation:
     guests: int
     date: str
     time: str
+    phone: str
+    duration: int
