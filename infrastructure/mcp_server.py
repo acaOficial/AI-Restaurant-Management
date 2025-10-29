@@ -11,8 +11,8 @@ def find_table(guests: int, location: str):
     return booking_service.find_table(guests, location)
 
 @mcp.tool
-def reserve_table(table_id: int, name: str, guests: int, date: str, time: str):
-    return booking_service.reserve_table(table_id, name, guests, date, time)
+def reserve_table(table_id: int, name: str, guests: int, date: str, time: str, phone: str):
+    return booking_service.reserve_table(table_id, name, guests, date, time, phone)
 
 @mcp.tool
 def get_tables():
