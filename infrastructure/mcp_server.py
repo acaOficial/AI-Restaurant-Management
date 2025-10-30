@@ -19,6 +19,14 @@ def reserve_table(table_id: int, name: str, guests: int, date: str, time: str, p
     return booking_service.reserve_table(table_id, name, guests, date, time, phone)
 
 @mcp.tool
+def cancel_reservation(phone: str, date: str):
+    return booking_service.cancel_reservation(phone, date)
+
+@mcp.tool
+def modify_reservation(phone: str, date: str, new_time: str = None, new_guests: int = None):
+    return booking_service.modify_reservation(phone, date, new_time, new_guests)
+
+@mcp.tool
 def get_tables():
     return booking_service.get_tables()
 

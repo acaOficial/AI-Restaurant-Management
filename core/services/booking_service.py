@@ -55,6 +55,80 @@ def reserve_table(table_id: int, name: str, guests: int, date: str, time: str, p
         "message": f"Reserva creada con éxito (duración estimada: {duration} min)."
     }
 
+def cancel_reservation(phone: str, date: str):
+    """
+    Cancela/elimina una reserva existente según el teléfono y la fecha.
+    """
+    existing = query("""
+    SELECT * FROM reservations
+    WHERE date = ? AND phone = ?
+    """, (date, phone))
+
+    if not existing:
+        return {
+            "success": False,
+            "message": f"No existe ninguna reserva registrada con el número {phone} para el {date}.",
+        }
+    
+    execute(
+        "DELETE FROM reservations WHERE date = ? AND phone = ?",
+        (date, phone),
+    )
+
+    return {
+        "success": True,
+        "message": f"Reserva eliminada con éxito para el {date} y el número {phone}.",
+    }
+
+def modify_reservation(phone: str, date: str, new_time: str = None, new_date: str = None, new_guests: int = None):
+    """
+    Modifica una reserva existente según el teléfono y la fecha.
+    Solo actualiza los campos proporcionados (new_time, new_date, new_guests).
+    """
+    existing = query("""
+        SELECT * FROM reservations
+        WHERE date = ? AND phone = ?
+    """, (date, phone))
+
+    if not existing:
+        return {
+            "success": False,
+            "message": f"No existe ninguna reserva registrada con el número {phone} para el {date}.",
+        }
+    
+    fields = []
+    values = []
+
+    if new_date is not None:
+        fields.append("date = ?")
+        values.append(new_date)
+
+    if new_time is not None:
+        fields.append("time = ?")
+        values.append(new_time)
+    
+    if new_guests is not None:
+        fields.append("guests = ?")
+        values.append(new_guests)
+    
+    if not fields:
+        return {
+            "success": False,
+            "message": "No se proporcionaron nuevos datos para modificar la reserva.",
+        }
+
+    set_clause = ", ".join(fields)
+    values.extend([date, phone])
+
+    execute(
+        f"UPDATE reservations SET {set_clause} WHERE date = ? AND phone = ?",
+        tuple(values),
+    )
+
+    return {
+        "success": True,
+        "message": f"Reserva modificada con éxito para el {date} y el número {phone}.",
+    }
 
 def is_table_available(table_id: int, date: str, time: str, duration: int) -> bool:
     """
