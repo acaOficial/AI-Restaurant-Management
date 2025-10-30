@@ -1,14 +1,17 @@
 import os
+from dotenv import load_dotenv
 from openai import OpenAI
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+load_dotenv()
+API_KEY = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=API_KEY)
 
 tools = [
     {
         "type": "mcp",
         "server_label": "restaurant_mcp",
         "server_description": "Servidor MCP para reservas en restaurante",
-        "server_url": "https://superimproved-mandy-nondiametral.ngrok-free.dev/mcp",
+        "server_url": "https://parve-unsensualistic-kaia.ngrok-free.dev/mcp",
         "require_approval": "never",
     }
 ]
