@@ -1,8 +1,12 @@
 import sqlite3
 import os
 
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(ROOT_DIR, "db", "restaurant.sqlite")
+
+print("DB_PATH:", DB_PATH)
+print("¿Existe la base de datos?:", os.path.exists(DB_PATH))
+print("Directorio actual de ejecución:", os.getcwd())
 
 def get_connection():
     return sqlite3.connect(DB_PATH)

@@ -8,6 +8,9 @@ dependencies:
   - sqlite
   - pip:
       - fastapi
+      - fastmcp
       - uvicorn
       - openai
       - requests
+      - python-dotenv
+      - pandas
