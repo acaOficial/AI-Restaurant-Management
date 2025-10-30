@@ -2,7 +2,7 @@ import sqlite3
 import pandas as pd
 
 # Conectar a la base de datos
-conn = sqlite3.connect("db/restaurant.sqlite")
+conn = sqlite3.connect("infrastructure/db/restaurant.sqlite")
 
 # Obtener todas las tablas
 tables = pd.read_sql_query("SELECT name FROM sqlite_master WHERE type='table';", conn)
