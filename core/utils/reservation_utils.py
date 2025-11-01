@@ -1,4 +1,5 @@
 # utils/reservation_utils.py
+from datetime import datetime
 
 def estimate_duration(guests: int, time: str) -> int:
     """
@@ -18,3 +19,18 @@ def estimate_duration(guests: int, time: str) -> int:
 
     # Limitar a un máximo razonable (3 horas)
     return min(duration, 180)
+
+
+
+
+def normalize_date(date_str: str) -> str:
+    """
+    Convierte fechas tipo '16/11/2025', '16-11-2025' o '2025/11/16'
+    al formato estándar ISO 'YYYY-MM-DD'.
+    """
+    for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(date_str, fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+    return date_str
