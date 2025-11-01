@@ -30,6 +30,14 @@ def modify_reservation(phone: str, date: str, new_time: str = None, new_guests: 
 def get_tables():
     return booking_service.get_tables()
 
+@mcp.tool
+def get_reservation(phone: str, date: str):
+    return booking_service.get_reservation(phone, date)
+
+@mcp.tool
+def modify_reservation_by_id(reservation_id: int, new_time: str = None, new_date: str = None, new_guests: int = None):
+    return booking_service.modify_reservation_by_id(reservation_id, new_time, new_date, new_guests)
+
 
 if __name__ == "__main__":
     print("Iniciando servidor MCP de reservas...")
