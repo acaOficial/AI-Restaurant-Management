@@ -44,7 +44,7 @@ cur.executemany(
         (1, 2, "interior", 1)
         # (2, 4, "interior", 1),
         # (3, 4, "terrace", 1),
-        # (4, 6, "interior", 1),
+        # (4, 6, "interior", 1)
     ],
 )
 
