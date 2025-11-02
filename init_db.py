@@ -1,6 +1,16 @@
 import sqlite3
+import os
+from dotenv import load_dotenv
 
-conn = sqlite3.connect("infrastructure/db/restaurant.sqlite")
+load_dotenv()
+
+# Obtener la ruta de la base de datos desde .env
+DB_PATH = os.getenv("DATABASE_PATH", "db/restaurant.sqlite")
+
+# Crear el directorio si no existe
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
+conn = sqlite3.connect(DB_PATH)
 cur = conn.cursor()
 
 cur.execute("""
@@ -40,4 +50,4 @@ cur.executemany(
 
 conn.commit()
 conn.close()
-print("✅ DB restaurante lista")
+print(f"✅ Base de datos creada en: {DB_PATH}")

@@ -1,8 +1,11 @@
 import sqlite3
 import os
+from dotenv import load_dotenv
 
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(ROOT_DIR, "db", "restaurant.sqlite")
+load_dotenv()
+
+# Obtener la ruta de la base de datos desde .env o usar valor por defecto
+DB_PATH = os.getenv("DATABASE_PATH", "db/restaurant.sqlite")
 
 print("DB_PATH:", DB_PATH)
 print("¿Existe la base de datos?:", os.path.exists(DB_PATH))
