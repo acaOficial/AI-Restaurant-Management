@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
+from datetime import datetime
 
 load_dotenv()
 
@@ -29,6 +30,7 @@ messages = [
         "content": (
             f"Eres un recepcionista de {APP_NAME}. "
             "Gestiona reservas usando las herramientas del MCP.\n\n"
+            f"FECHA ACTUAL: {datetime.now().strftime('%d/%m/%Y')}\n\n"  # ← NUEVO
             "IMPORTANTE:\n"
             "- 'location' significa zona del restaurante: solo 'interior' o 'terrace' (NO ciudad)\n"
             "- Pide: nombre, teléfono, personas, zona (interior/terraza), fecha (DD/MM/YYYY) y hora (HH:MM)\n"

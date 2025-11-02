@@ -1,238 +1,91 @@
-from infrastructure.db_repository import query, execute
-from core.utils.reservation_utils import estimate_duration, normalize_date, is_valid_time, is_open_day, is_holiday
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-OPEN_TIME = os.getenv("OPEN_TIME", "09:00")
-CLOSE_TIME = os.getenv("CLOSE_TIME", "00:00")
+from core.domain.booking_date import BookingDate
+from core.domain.reservation import Reservation
+from core.utils.reservation_utils import estimate_duration
 
 
-# ============================================================
-# BÚSQUEDA DE MESAS DISPONIBLES
-# ============================================================
-def find_table(guests: int, location: str, date: str, time: str):
-    print(f"[DEBUG] find_table() called with guests={guests}, location={location}, date={date}, time={time}")
-    date = normalize_date(date)
+class BookingService:
+    """
+    Capa de aplicación que coordina la lógica de reservas.
+    Orquesta las entidades del dominio y los repositorios de infraestructura.
+    """
 
-    candidate_tables = query("""
-        SELECT * FROM tables
-        WHERE location = ? AND capacity >= ?
-        ORDER BY capacity ASC
-    """, (location, guests))
-
-    print(f"[DEBUG] find_table(): found {len(candidate_tables)} candidate tables")
-
-    duration = estimate_duration(guests, time)
-    print(f"[DEBUG] find_table(): estimated duration = {duration} min")
-
-    for table in candidate_tables:
-        if is_table_available(table["id"], date, time, duration):
-            print(f"[DEBUG] find_table(): table {table['id']} is available")
-            return [table]
-
-    print("[DEBUG] find_table(): no tables available")
-    return []
-
-
-# ============================================================
-# CREACIÓN DE RESERVAS
-# ============================================================
-def reserve_table(table_id: int, name: str, guests: int, date: str, time: str, phone: str):
-    print(f"[DEBUG] reserve_table() called with table_id={table_id}, name={name}, guests={guests}, date={date}, time={time}, phone={phone}")
-    date = normalize_date(date)
-
-    # Verificar festivos primero
-    holiday_name = is_holiday(date)
-    if holiday_name:
-        print(f"[DEBUG] reserve_table(): date {date} is a holiday ({holiday_name})")
-        return {
-            "success": False,
-            "message": f"Lo siento, el restaurante está cerrado por {holiday_name}.",
-        }
-
-    # Verificar hora válida
-    if not is_valid_time(time):
-        return {
-            "success": False,
-            "message": f"Lo siento, no abrimos a las {time}. Nuestro horario es de {OPEN_TIME} a {CLOSE_TIME}.",
-        }
+    def __init__(self, reservation_repo, table_repo, holiday_repo):
+        self.reservation_repo = reservation_repo
+        self.table_repo = table_repo
+        self.holiday_repo = holiday_repo
     
-    # Verificar día abierto
-    if not is_open_day(date):
+    # ============================================================
+    # CREAR RESERVA
+    # ============================================================
+    def create_reservation(self, table_id: int, name: str, guests: int, date: str, time: str, phone: str):
+        booking_date = BookingDate(date, time, self.holiday_repo)
+
+        reason = booking_date.get_invalid_reason()
+        if reason:
+            return {"success": False, "message": reason}
+
+        # Debug: imprimir la fecha normalizada y buscar duplicados
+        normalized = booking_date.normalized_date()
+        # print(f"[DEBUG] create_reservation: fecha original='{date}', normalizada='{normalized}'")
+        # print(f"[DEBUG] create_reservation: buscando duplicados con phone='{phone}', date='{normalized}'")
+        
+        existing = self.reservation_repo.find_by_phone_and_date(phone, normalized)
+        # print(f"[DEBUG] create_reservation: reservas encontradas={len(existing) if existing else 0}")
+        if existing:
+            print(f"[DEBUG] create_reservation: reservas existentes: {existing}")
+        
+        if existing:
+            return {"success": False, "message": f"Ya existe una reserva registrada con el número {phone} para el {normalized}."}
+
+        duration = estimate_duration(guests, time)
+        if not self.table_repo.is_table_available(table_id, normalized, time, duration):
+            return {"success": False, "message": f"La mesa {table_id} no está disponible a las {time} el {normalized}."}
+
+        # Usar la fecha normalizada para guardar en la base de datos
+        # print(f"[DEBUG] create_reservation: creando reserva con fecha='{normalized}'")
+        reservation = Reservation(table_id, name, guests, normalized, time, phone, duration)
+        self.reservation_repo.insert(reservation)
         return {
-            "success": False,
-            "message": f"Lo siento, los lunes permanecemos cerrados.",
+            "success": True,
+            "message": f"Reserva creada con éxito (duración estimada: {duration} min).",
+            "table_id": table_id,
+            "duration": duration
         }
 
-    existing = query("""
-        SELECT * FROM reservations
-        WHERE date = ? AND phone = ?
-    """, (date, phone))
-    print(f"[DEBUG] reserve_table(): found {len(existing)} existing reservations for phone={phone} on date={date}")
+    # ============================================================
+    # OBTENER UNA RESERVA
+    # ============================================================
+    def get_reservation(self, phone: str, date: str):
+        date = BookingDate(date, "00:00", self.holiday_repo).normalized_date()
+        reservation = self.reservation_repo.find_by_phone_and_date(phone, date)
+        if not reservation:
+            return {"success": False, "message": f"No existe ninguna reserva con el número {phone} para el {date}."}
+        return {"success": True, "reservation": reservation[0]}
 
-    if existing:
-        return {
-            "success": False,
-            "message": f"Ya existe una reserva registrada con el número {phone} para el {date}.",
-        }
+    # ============================================================
+    # CANCELAR RESERVA
+    # ============================================================
+    def cancel_reservation(self, phone: str, date: str):
+        date = BookingDate(date, "00:00", self.holiday_repo).normalized_date()
+        existing = self.reservation_repo.find_by_phone_and_date(phone, date)
+        if not existing:
+            return {"success": False, "message": f"No existe ninguna reserva con el número {phone} para el {date}."}
+        self.reservation_repo.delete_by_phone_and_date(phone, date)
+        return {"success": True, "message": f"Reserva eliminada con éxito para el {date} y número {phone}."}
 
-    duration = estimate_duration(guests, time)
-    print(f"[DEBUG] reserve_table(): estimated duration = {duration} min")
-
-    if not is_table_available(table_id, date, time, duration):
-        print(f"[DEBUG] reserve_table(): table {table_id} not available at {time} on {date}")
-        return {
-            "success": False,
-            "message": f"La mesa {table_id} no está disponible a las {time} el {date}.",
-        }
-
-    execute(
-        "INSERT INTO reservations (table_id, name, guests, date, time, phone, duration) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (table_id, name, guests, date, time, phone, duration),
-    )
-
-    print(f"[DEBUG] reserve_table(): reservation created successfully for table {table_id}")
-
-    return {
-        "success": True,
-        "table_id": table_id,
-        "duration": duration,
-        "message": f"Reserva creada con éxito (duración estimada: {duration} min)."
-    }
-
-
-# ============================================================
-# CANCELACIÓN DE RESERVAS
-# ============================================================
-def cancel_reservation(phone: str, date: str):
-    print(f"[DEBUG] cancel_reservation() called with phone={phone}, date={date}")
-    date = normalize_date(date)
-
-    existing = query("""
-        SELECT * FROM reservations
-        WHERE date = ? AND phone = ?
-    """, (date, phone))
-    print(f"[DEBUG] cancel_reservation(): found {len(existing)} reservations")
-
-    if not existing:
-        return {
-            "success": False,
-            "message": f"No existe ninguna reserva registrada con el número {phone} para el {date}.",
-        }
-
-    execute("DELETE FROM reservations WHERE date = ? AND phone = ?", (date, phone))
-    print(f"[DEBUG] cancel_reservation(): reservation deleted for phone={phone} and date={date}")
-
-    return {
-        "success": True,
-        "message": f"Reserva eliminada con éxito para el {date} y el número {phone}.",
-    }
-
-
-# ============================================================
-# OBTENER Y MODIFICAR RESERVAS
-# ============================================================
-def get_reservation(phone: str, date: str):
-    print(f"[DEBUG] get_reservation() called with phone={phone}, date={date}")
-    date = normalize_date(date)
-
-    result = query("""
-        SELECT * FROM reservations
-        WHERE phone = ? AND date = ?
-    """, (phone, date))
-    print(f"[DEBUG] get_reservation(): found {len(result)} results")
-
-    if not result:
-        return {
-            "success": False,
-            "message": f"No existe ninguna reserva registrada con el número {phone} para el {date}.",
-        }
-
-    return {"success": True, "reservation": result[0]}
-
-
-def modify_reservation_by_id(reservation_id: int, new_time: str = None, new_date: str = None, new_guests: int = None):
-    print(f"[DEBUG] modify_reservation_by_id() called with reservation_id={reservation_id}, new_time={new_time}, new_date={new_date}, new_guests={new_guests}")
-    if new_date:
-        new_date = normalize_date(new_date)
-
-    if new_time and not is_valid_time(new_time) or (new_date and not is_open_day(new_date)):
-        return {
-            "success": False,
-            "message": "El restaurante está cerrado en la fecha u hora solicitada.",
-        }
-
-    existing = query("SELECT * FROM reservations WHERE id = ?", (reservation_id,))
-    print(f"[DEBUG] modify_reservation_by_id(): existing reservation found = {bool(existing)}")
-
-    if not existing:
-        return {"success": False, "message": f"No existe una reserva con ID {reservation_id}."}
-
-    fields, values = [], []
-
-    if new_date:
-        fields.append("date = ?")
-        values.append(new_date)
-    if new_time:
-        fields.append("time = ?")
-        values.append(new_time)
-    if new_guests:
-        fields.append("guests = ?")
-        values.append(new_guests)
-
-    if not fields:
-        print("[DEBUG] modify_reservation_by_id(): no new data provided")
-        return {"success": False, "message": "No se proporcionaron nuevos datos para modificar."}
-
-    set_clause = ", ".join(fields)
-    values.append(reservation_id)
-
-    execute(f"UPDATE reservations SET {set_clause} WHERE id = ?", tuple(values))
-    print(f"[DEBUG] modify_reservation_by_id(): reservation {reservation_id} updated successfully")
-
-    return {"success": True, "message": "Reserva modificada con éxito."}
-
-
-# ============================================================
-# DISPONIBILIDAD DE MESAS
-# ============================================================
-def is_table_available(table_id: int, date: str, time: str, duration: int) -> bool:
-    print(f"[DEBUG] is_table_available() called with table_id={table_id}, date={date}, time={time}, duration={duration}")
-    date = normalize_date(date)
-
-    reservations = query("""
-        SELECT time, duration FROM reservations
-        WHERE table_id = ? AND date = ?
-    """, (table_id, date))
-    print(f"[DEBUG] is_table_available(): found {len(reservations)} reservations for that date")
-
-    new_start = _to_minutes(time)
-    new_end = new_start + duration
-
-    for r in reservations:
-        existing_start = _to_minutes(r["time"])
-        existing_end = existing_start + r["duration"]
-        if not (new_end <= existing_start or new_start >= existing_end):
-            print(f"[DEBUG] is_table_available(): overlap detected with existing reservation from {r['time']} ({r['duration']} min)")
-            return False
-
-    print(f"[DEBUG] is_table_available(): table {table_id} is available")
-    return True
-
-
-# ============================================================
-# UTILIDADES
-# ============================================================
-def _to_minutes(t: str) -> int:
-    """Convierte 'HH:MM' a minutos desde medianoche."""
-    h, m = map(int, t.split(":"))
-    return h * 60 + m
-
-
-def get_tables():
-    """Devuelve todas las mesas disponibles."""
-    print("[DEBUG] get_tables() called")
-    tables = query("SELECT * FROM tables WHERE available = 1")
-    print(f"[DEBUG] get_tables(): found {len(tables)} tables available")
-    return tables
+    # ============================================================
+    # MODIFICAR RESERVA
+    # ============================================================
+    def modify_reservation(self, phone: str, date: str, updates: dict):
+        # Normalizar la fecha de búsqueda
+        date = BookingDate(date, "00:00", self.holiday_repo).normalized_date()
+        existing = self.reservation_repo.find_by_phone_and_date(phone, date)
+        if not existing:
+            return {"success": False, "message": f"No existe una reserva con el número {phone} para el {date}."}
+        
+        # Normalizar la nueva fecha en updates si existe
+        if "date" in updates:
+            updates["date"] = BookingDate(updates["date"], "00:00", self.holiday_repo).normalized_date()
+        
+        self.reservation_repo.update(phone, date, updates)
+        return {"success": True, "message": f"Reserva modificada con éxito."}
