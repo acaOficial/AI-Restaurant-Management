@@ -1,5 +1,11 @@
 from infrastructure.db_repository import query, execute
-from core.utils.reservation_utils import estimate_duration, normalize_date, is_valid_time, is_open_day
+from core.utils.reservation_utils import estimate_duration, normalize_date, is_valid_time, is_open_day, is_holiday
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+OPEN_TIME = os.getenv("OPEN_TIME", "09:00")
+CLOSE_TIME = os.getenv("CLOSE_TIME", "00:00")
 
 
 # ============================================================
@@ -36,10 +42,27 @@ def reserve_table(table_id: int, name: str, guests: int, date: str, time: str, p
     print(f"[DEBUG] reserve_table() called with table_id={table_id}, name={name}, guests={guests}, date={date}, time={time}, phone={phone}")
     date = normalize_date(date)
 
-    if not is_valid_time(time) or not is_open_day(date):
+    # Verificar festivos primero
+    holiday_name = is_holiday(date)
+    if holiday_name:
+        print(f"[DEBUG] reserve_table(): date {date} is a holiday ({holiday_name})")
         return {
             "success": False,
-            "message": "El restaurante está cerrado en la fecha u hora solicitada.",
+            "message": f"Lo siento, el restaurante está cerrado por {holiday_name}.",
+        }
+
+    # Verificar hora válida
+    if not is_valid_time(time):
+        return {
+            "success": False,
+            "message": f"Lo siento, no abrimos a las {time}. Nuestro horario es de {OPEN_TIME} a {CLOSE_TIME}.",
+        }
+    
+    # Verificar día abierto
+    if not is_open_day(date):
+        return {
+            "success": False,
+            "message": f"Lo siento, los lunes permanecemos cerrados.",
         }
 
     existing = query("""
