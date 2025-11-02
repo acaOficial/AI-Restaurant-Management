@@ -79,6 +79,17 @@ def get_tables():
     """Devuelve todas las mesas disponibles."""
     return table_service.get_tables()
 
+
+# TODO: Añadir pedido a domicilio
+
+# mcp.tools {to_order, cancel_order}
+
+# REPOSITORIES: Habría que añaadir una sql_food_repository, además de una sql_delivery_guy_repository y una delivery_repository
+# DOMAIN: Mismos repositorios pero abstractos, además de las entidades Order, DeliveryGuy, FoodItem
+# SERVICES: DeliveryService, FoodService
+
+
+
 # ============================================================
 # EJECUCIÓN DEL SERVIDOR MCP
 # ============================================================
