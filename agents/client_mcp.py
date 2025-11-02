@@ -3,15 +3,22 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 load_dotenv()
-API_KEY = os.getenv("OPENAI_API_KEY")
-client = OpenAI(api_key=API_KEY)
+
+# Cargar configuración desde .env
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4-turbo")
+MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:8000/mcp")
+MCP_SERVER_NAME = os.getenv("MCP_SERVER_NAME", "booking-mcp")
+APP_NAME = os.getenv("APP_NAME", "AI Booking System")
+
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 tools = [
     {
         "type": "mcp",
-        "server_label": "restaurant_mcp",
-        "server_description": "Servidor MCP para reservas en restaurante",
-        "server_url": "https://superimproved-mandy-nondiametral.ngrok-free.dev/mcp",
+        "server_label": MCP_SERVER_NAME,
+        "server_description": f"Servidor MCP para {APP_NAME}",
+        "server_url": MCP_SERVER_URL,
         "require_approval": "never",
     }
 ]
@@ -20,17 +27,18 @@ messages = [
     {
         "role": "system",
         "content": (
-            "Eres un recepcionista de restaurante. "
-            "Usa las herramientas del MCP para buscar y crear reservas. "
-            "Si falta información (nombre, personas, zona, fecha, hora o teléfono), pídesela al cliente. "
-            "Cuando la reserva esté confirmada, despídete con un mensaje amable como "
-            "'¿Puedo ayudarte con algo más?' o 'Gracias por tu reserva, ¡te esperamos!'. "
-            "Si el cliente indica que no necesita nada más, finaliza la conversación con un agradecimiento."
+            f"Eres un recepcionista de {APP_NAME}. "
+            "Gestiona reservas usando las herramientas del MCP.\n\n"
+            "IMPORTANTE:\n"
+            "- 'location' significa zona del restaurante: solo 'interior' o 'terrace'\n"
+            "- NO es ubicación geográfica, NO preguntes por ciudad\n"
+            "- Pide: nombre, teléfono, personas, zona (interior/terraza), fecha (DD/MM/YYYY) y hora (HH:MM)\n"
+            "- Sé amable y confirma la reserva antes de despedirte"
         ),
     }
 ]
 
-print("=== Chat con el recepcionista ===\n")
+print(f"=== {APP_NAME} - Chat de Reservas ===\n")
 
 while True:
     user_message = input("👤 Tú: ").strip()
@@ -40,7 +48,7 @@ while True:
     messages.append({"role": "user", "content": user_message})
 
     response = client.responses.create(
-        model="gpt-5",
+        model=OPENAI_MODEL,
         tools=tools,
         input=messages,
     )

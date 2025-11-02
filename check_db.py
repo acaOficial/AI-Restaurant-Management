@@ -1,8 +1,17 @@
 import sqlite3
 import pandas as pd
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Obtener la ruta de la base de datos desde .env
+DB_PATH = os.getenv("DATABASE_PATH", "db/restaurant.sqlite")
+
+print(f"Conectando a: {DB_PATH}\n")
 
 # Conectar a la base de datos
-conn = sqlite3.connect("infrastructure/db/restaurant.sqlite")
+conn = sqlite3.connect(DB_PATH)
 
 # Obtener todas las tablas
 tables = pd.read_sql_query("SELECT name FROM sqlite_master WHERE type='table';", conn)
