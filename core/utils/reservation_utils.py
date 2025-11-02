@@ -11,6 +11,8 @@ MAX_BOOKING_DURATION = int(os.getenv("MAX_BOOKING_DURATION_MINUTES", "180"))
 EXTRA_TIME_PER_GUEST = int(os.getenv("EXTRA_TIME_PER_GUEST_MINUTES", "15"))
 LATE_DINNER_HOUR = int(os.getenv("LATE_DINNER_HOUR_THRESHOLD", "21"))
 LATE_DINNER_EXTRA = int(os.getenv("LATE_DINNER_EXTRA_MINUTES", "30"))
+OPEN_TIME = os.getenv("OPEN_TIME", "09:00")
+CLOSE_TIME = os.getenv("CLOSE_TIME", "00:00")
 
 def estimate_duration(guests: int, time: str) -> int:
     """
@@ -45,3 +47,25 @@ def normalize_date(date_str: str) -> str:
         except ValueError:
             continue
     return date_str
+
+
+
+
+def is_valid_time(time_str: str) -> bool:
+    """Comprueba si la hora está dentro del horario del restaurante."""
+    try:
+        time_requested = datetime.strptime(time_str, "%H:%M").time()
+        return time_requested >= datetime.strptime(OPEN_TIME, "%H:%M").time() and time_requested <= datetime.strptime(CLOSE_TIME, "%H:%M").time()
+    except ValueError:
+        return False
+
+
+
+
+def is_open_day(date_str: str) -> bool:
+    """Devuelve True si el restaurante está abierto (martes a domingo)."""
+    try:
+        fecha = datetime.strptime(date_str, "%d/%m/%Y")
+        return fecha.weekday() != 0  # 0 = lunes
+    except ValueError:
+        return False
