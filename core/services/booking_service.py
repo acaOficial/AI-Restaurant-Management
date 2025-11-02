@@ -1,5 +1,5 @@
 from infrastructure.db_repository import query, execute
-from core.utils.reservation_utils import estimate_duration, normalize_date
+from core.utils.reservation_utils import estimate_duration, normalize_date, is_valid_time, is_open_day
 
 
 # ============================================================
@@ -35,6 +35,12 @@ def find_table(guests: int, location: str, date: str, time: str):
 def reserve_table(table_id: int, name: str, guests: int, date: str, time: str, phone: str):
     print(f"[DEBUG] reserve_table() called with table_id={table_id}, name={name}, guests={guests}, date={date}, time={time}, phone={phone}")
     date = normalize_date(date)
+
+    if not is_valid_time(time) or not is_open_day(date):
+        return {
+            "success": False,
+            "message": "El restaurante está cerrado en la fecha u hora solicitada.",
+        }
 
     existing = query("""
         SELECT * FROM reservations
@@ -127,6 +133,12 @@ def modify_reservation_by_id(reservation_id: int, new_time: str = None, new_date
     print(f"[DEBUG] modify_reservation_by_id() called with reservation_id={reservation_id}, new_time={new_time}, new_date={new_date}, new_guests={new_guests}")
     if new_date:
         new_date = normalize_date(new_date)
+
+    if new_time and not is_valid_time(new_time) or (new_date and not is_open_day(new_date)):
+        return {
+            "success": False,
+            "message": "El restaurante está cerrado en la fecha u hora solicitada.",
+        }
 
     existing = query("SELECT * FROM reservations WHERE id = ?", (reservation_id,))
     print(f"[DEBUG] modify_reservation_by_id(): existing reservation found = {bool(existing)}")
