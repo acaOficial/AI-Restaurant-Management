@@ -1,53 +1,98 @@
 from fastmcp import FastMCP
-import sys, os
+import sys
+import os
 from dotenv import load_dotenv
 
+# Añadir el directorio raíz al path para los imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Cargar configuración
 load_dotenv()
 
-from core.services import booking_service
+# Importar dependencias de las capas correctas
+from core.services.booking_service import BookingService
+from core.services.table_service import TableService
+from infrastructure.repositories.sql_reservation_repository import SQLReservationRepository
+from infrastructure.repositories.sql_table_repository import SQLTableRepository
+from infrastructure.repositories.json_holiday_repository import JSONHolidayRepository
 
-# Obtener configuración desde .env
+# ============================================================
+# CONFIGURACIÓN DEL SERVIDOR MCP
+# ============================================================
 MCP_SERVER_NAME = os.getenv("MCP_SERVER_NAME", "restaurant-mcp")
 MCP_SERVER_HOST = os.getenv("MCP_SERVER_HOST", "0.0.0.0")
 MCP_SERVER_PORT = int(os.getenv("MCP_SERVER_PORT", "8000"))
 
 mcp = FastMCP(MCP_SERVER_NAME)
 
-@mcp.tool
-def find_table(guests: int, location: str, date: str, time: str):
-    """
-    Busca una mesa disponible para el número de comensales en una fecha/hora concretas.
-    """
-    return booking_service.find_table(guests, location, date, time)
+# ============================================================
+# INYECCIÓN DE DEPENDENCIAS (FASE DE ARRANQUE)
+# ============================================================
+reservation_repo = SQLReservationRepository()
+table_repo = SQLTableRepository()
+holiday_repo = JSONHolidayRepository()
 
+booking_service = BookingService(
+    reservation_repo=reservation_repo,
+    table_repo=table_repo,
+    holiday_repo=holiday_repo
+)
+
+table_service = TableService(
+    table_repo=table_repo,
+    holiday_repo=holiday_repo
+)
+
+# ============================================================
+# EXPOSICIÓN DE FUNCIONALIDADES A MCP
+# ============================================================
 
 @mcp.tool
 def reserve_table(table_id: int, name: str, guests: int, date: str, time: str, phone: str):
-    return booking_service.reserve_table(table_id, name, guests, date, time, phone)
+    """Crea una nueva reserva."""
+    return booking_service.create_reservation(table_id, name, guests, date, time, phone)
 
 @mcp.tool
 def cancel_reservation(phone: str, date: str):
+    """Cancela una reserva existente."""
     return booking_service.cancel_reservation(phone, date)
 
 @mcp.tool
-def modify_reservation(phone: str, date: str, new_time: str = None, new_guests: int = None):
-    return booking_service.modify_reservation(phone, date, new_time, new_guests)
-
-@mcp.tool
-def get_tables():
-    return booking_service.get_tables()
+def modify_reservation_by_phone(phone: str, date: str, new_time: str = None, new_date: str = None, new_guests: int = None):
+    """Modifica una reserva existente por teléfono."""
+    updates = {k: v for k, v in {"time": new_time, "date": new_date, "guests": new_guests}.items() if v}
+    return booking_service.modify_reservation(phone, date, updates)
 
 @mcp.tool
 def get_reservation(phone: str, date: str):
+    """Obtiene la información de una reserva existente."""
     return booking_service.get_reservation(phone, date)
 
+
 @mcp.tool
-def modify_reservation_by_id(reservation_id: int, new_time: str = None, new_date: str = None, new_guests: int = None):
-    return booking_service.modify_reservation_by_id(reservation_id, new_time, new_date, new_guests)
+def find_table(guests: int, location: str, date: str, time: str):
+    """Busca mesas disponibles."""
+    return table_service.find_table(guests, location, date, time)
+
+@mcp.tool
+def get_tables():
+    """Devuelve todas las mesas disponibles."""
+    return table_service.get_tables()
 
 
+# TODO: Añadir pedido a domicilio
+
+# mcp.tools {to_order, cancel_order}
+
+# REPOSITORIES: Habría que añaadir una sql_food_repository, además de una sql_delivery_guy_repository y una delivery_repository
+# DOMAIN: Mismos repositorios pero abstractos, además de las entidades Order, DeliveryGuy, FoodItem
+# SERVICES: DeliveryService, FoodService
+
+
+
+# ============================================================
+# EJECUCIÓN DEL SERVIDOR MCP
+# ============================================================
 if __name__ == "__main__":
     print(f"Iniciando servidor MCP de reservas '{MCP_SERVER_NAME}'...")
     print(f"Host: {MCP_SERVER_HOST}:{MCP_SERVER_PORT}")
