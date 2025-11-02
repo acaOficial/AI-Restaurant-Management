@@ -1,10 +1,19 @@
 from fastmcp import FastMCP
 import sys, os
+from dotenv import load_dotenv
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+load_dotenv()
 
 from core.services import booking_service
 
-mcp = FastMCP("restaurant-mcp")
+# Obtener configuración desde .env
+MCP_SERVER_NAME = os.getenv("MCP_SERVER_NAME", "restaurant-mcp")
+MCP_SERVER_HOST = os.getenv("MCP_SERVER_HOST", "0.0.0.0")
+MCP_SERVER_PORT = int(os.getenv("MCP_SERVER_PORT", "8000"))
+
+mcp = FastMCP(MCP_SERVER_NAME)
 
 @mcp.tool
 def find_table(guests: int, location: str, date: str, time: str):
@@ -40,5 +49,6 @@ def modify_reservation_by_id(reservation_id: int, new_time: str = None, new_date
 
 
 if __name__ == "__main__":
-    print("Iniciando servidor MCP de reservas...")
-    mcp.run(transport="http", host="0.0.0.0", port=8000)
+    print(f"Iniciando servidor MCP de reservas '{MCP_SERVER_NAME}'...")
+    print(f"Host: {MCP_SERVER_HOST}:{MCP_SERVER_PORT}")
+    mcp.run(transport="http", host=MCP_SERVER_HOST, port=MCP_SERVER_PORT)
