@@ -15,7 +15,7 @@ LATE_DINNER_HOUR = int(os.getenv("LATE_DINNER_HOUR_THRESHOLD", "21"))
 LATE_DINNER_EXTRA = int(os.getenv("LATE_DINNER_EXTRA_MINUTES", "30"))
 OPEN_TIME = os.getenv("OPEN_TIME", "09:00")
 CLOSE_TIME = os.getenv("CLOSE_TIME", "00:00")
-HOLIDAYS_JSON = os.getenv("HOLIDAYS_JSON", "data/holidays.json")
+HOLIDAYS_JSON = os.getenv("HOLIDAYS_JSON", "resources/holidays.json")
 
 def estimate_duration(guests: int, time: str) -> int:
     """

@@ -12,8 +12,8 @@ load_dotenv()
 # Importar dependencias de las capas correctas
 from core.services.booking_service import BookingService
 from core.services.table_service import TableService
-from infrastructure.repositories.reservation_repository import ReservationRepository
-from infrastructure.repositories.table_repository import TableRepository
+from infrastructure.repositories.sql_reservation_repository import SQLReservationRepository
+from infrastructure.repositories.sql_table_repository import SQLTableRepository
 from infrastructure.repositories.json_holiday_repository import JSONHolidayRepository
 
 # ============================================================
@@ -28,8 +28,8 @@ mcp = FastMCP(MCP_SERVER_NAME)
 # ============================================================
 # INYECCIÓN DE DEPENDENCIAS (FASE DE ARRANQUE)
 # ============================================================
-reservation_repo = ReservationRepository()
-table_repo = TableRepository()
+reservation_repo = SQLReservationRepository()
+table_repo = SQLTableRepository()
 holiday_repo = JSONHolidayRepository()
 
 booking_service = BookingService(

@@ -3,7 +3,7 @@ from core.domain.holiday_repository import HolidayRepository
 from dotenv import load_dotenv
 
 load_dotenv()
-HOLIDAYS_JSON = os.getenv("HOLIDAYS_JSON", "data/holidays.json")
+HOLIDAYS_JSON = os.getenv("HOLIDAYS_JSON", "resources/holidays.json")
 
 class JSONHolidayRepository(HolidayRepository):
     def get_holiday_name(self, date_str: str) -> str | None:

@@ -7,7 +7,7 @@ import os
 load_dotenv()
 OPEN_TIME = os.getenv("OPEN_TIME", "09:00")
 CLOSE_TIME = os.getenv("CLOSE_TIME", "00:00")
-HOLIDAYS_JSON = os.getenv("HOLIDAYS_JSON", "data/holidays.json")
+HOLIDAYS_JSON = os.getenv("HOLIDAYS_JSON", "resources/holidays.json")
 
 class BookingDate:
     def __init__(self, date_str: str, time_str: str, holiday_repo: HolidayRepository):
