@@ -12,6 +12,7 @@ load_dotenv()
 # Importar dependencias de las capas correctas
 from core.services.booking_service import BookingService
 from core.services.table_service import TableService
+from core.services.information_service import InformationService
 from infrastructure.repositories.sql_reservation_repository import SQLReservationRepository
 from infrastructure.repositories.sql_table_repository import SQLTableRepository
 from infrastructure.repositories.json_holiday_repository import JSONHolidayRepository
@@ -43,6 +44,8 @@ table_service = TableService(
     holiday_repo=holiday_repo
 )
 
+info_service = InformationService()
+
 # ============================================================
 # EXPOSICIÓN DE FUNCIONALIDADES A MCP
 # ============================================================
@@ -68,7 +71,6 @@ def get_reservation(phone: str, date: str):
     """Obtiene la información de una reserva existente."""
     return booking_service.get_reservation(phone, date)
 
-
 @mcp.tool
 def find_table(guests: int, location: str, date: str, time: str):
     """Busca mesas disponibles."""
@@ -79,6 +81,20 @@ def get_tables():
     """Devuelve todas las mesas disponibles."""
     return table_service.get_tables()
 
+@mcp.tool
+def get_opening_hours():
+    """Devuelve el horario de apertura del restaurante."""
+    return info_service.get_opening_hours()
+
+@mcp.tool
+def get_opening_days():
+    """Devuelve los días de apertura del restaurante."""
+    return info_service.get_opening_days()
+
+@mcp.tool
+def get_menu_info():
+    """Devuelve información sobre el menú del restaurante."""
+    return info_service.get_menu_info()
 
 # TODO: Añadir pedido a domicilio
 
