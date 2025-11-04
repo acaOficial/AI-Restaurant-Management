@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "name": "Hamburguesa y Papas",
+    "type": "plato",
+    "price": 12.50
+  },
+  {
+    "id": 2,
+    "name": "Ración de Calamares Fritos",
+    "type": "plato",
+    "price": 15.00
+  },
+  {
+    "id": 3,
+    "name": "Cochinillo",
+    "type": "plato",
+    "price": 22.00
+  },
+  {
+    "id": 4,
+    "name": "Refresco",
+    "type": "bebida",
+    "price": 2.50
+  },
+  {
+    "id": 5,
+    "name": "Cerveza",
+    "type": "bebida",
+    "price": 3.00
+  }
+]

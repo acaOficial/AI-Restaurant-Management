@@ -1,10 +1,13 @@
 import os
+from infrastructure.repositories.json_menu_repository import JSONMenuRepository
+from core.domain.booking_date import BookingDate
 
 OPEN_TIME = os.getenv("OPEN_TIME", "09:00")
 CLOSE_TIME = os.getenv("CLOSE_TIME", "00:00")
 
 class InformationService:
-    def __init__(self): 
+    def __init__(self):
+        self.menu_repo = JSONMenuRepository()
         pass
 
     def get_opening_hours(self) -> str:
@@ -14,4 +17,25 @@ class InformationService:
         return "El restaurante está abierto de martes a domingo. Los lunes está cerrado."
     
     def get_menu_info(self) -> str:
-        pass
+        """Devuelve información del menú en formato legible."""
+        dishes = self.menu_repo.get_menu_dishes()
+        drinks = self.menu_repo.get_menu_drinks()
+
+        info = "🍽️ *Menú del restaurante:*\n\n"
+
+        info += "🍲 *Platos:*\n"
+        for dish in dishes:
+            info += f"{dish['id']} - {dish['name']}: {dish['price']}€\n"
+
+        info += "\n🍹 *Bebidas:*\n"
+        for drink in drinks:
+            info += f"{drink['id']} - {drink['name']}: {drink['price']}€\n"
+        
+        return info
+    
+    def is_open(self, date, time, holiday_repo) -> dict:
+        """Indica si el restaurante está abierto y devuelve la razón si está cerrado."""
+        booking_date = BookingDate(date, time, holiday_repo)
+        reason = booking_date.get_invalid_reason()
+        return reason
+        
