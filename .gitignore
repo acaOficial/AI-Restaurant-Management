@@ -1,8 +1,12 @@
 # Ignorar .env
 .env
 
-# Ignorar archivos .pcy
-*.pcy
+# Ignorar archivos compilados de Python
+*.pyc
+__pycache__/
 
-# Ignorar archivo .sqlite
+# Ignorar archivos de caché personalizados
+*.pyc
+
+# Ignorar base de datos local
 *.sqlite
