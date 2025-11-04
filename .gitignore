@@ -1,2 +1,8 @@
 # Ignorar .env
 .env
+
+# Ignorar archivos .pcy
+*.pcy
+
+# Ignorar archivo .sqlite
+*.sqlite
