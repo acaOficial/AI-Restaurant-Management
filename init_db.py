@@ -36,6 +36,17 @@ CREATE TABLE IF NOT EXISTS reservations (
 )
 """)
 
+cur.execute("""
+CREATE TABLE IF NOT EXISTS orders (
+    order_id TEXT PRIMARY KEY,
+    items TEXT,
+    total_price REAL,
+    status TEXT,
+    customer_phone TEXT,
+    delivery_address TEXT
+)""")
+
+
 # Ejemplo de mesas
 cur.execute("DELETE FROM tables")
 cur.executemany(
