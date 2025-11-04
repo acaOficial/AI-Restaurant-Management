@@ -93,6 +93,15 @@ def get_opening_hours():
     return info_service.get_opening_hours()
 
 @mcp.tool
+def is_open(date: str, time: str):
+    """Indica si el restaurante está abierto en la fecha y hora especificadas. Devuelve el estado y la razón si está cerrado."""
+    result = info_service.is_open(date, time, holiday_repo=holiday_repo)
+    if not result:
+        return {"status": "open", "message": "El restaurante está abierto en esa fecha y hora."}
+    else:
+        return {"status": "closed", "reason": result}
+
+@mcp.tool
 def get_opening_days():
     """Devuelve los días de apertura del restaurante."""
     return info_service.get_opening_days()
@@ -107,6 +116,8 @@ def get_menu_info():
 # @mcp.tool
 # def to_order(items: list, customer_phone: str, delivery_address: str):
 #     """Crea un nuevo pedido a domicilio."""
+#     info_service.get_menu_info()    # Mostrar el menú antes de hacer el pedido
+#     # Buscar por ID los platos y bebidas para paserlos al servicio de pedidos
 #     order_service.create_order(13, items, 0.0, "pending", customer_phone, delivery_address)
 # mcp.tools {to_order, cancel_order}
 
