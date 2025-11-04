@@ -12,10 +12,13 @@ load_dotenv()
 # Importar dependencias de las capas correctas
 from core.services.booking_service import BookingService
 from core.services.table_service import TableService
+from core.services.order_service import OrderService
 from core.services.information_service import InformationService
+
 from infrastructure.repositories.sql_reservation_repository import SQLReservationRepository
 from infrastructure.repositories.sql_table_repository import SQLTableRepository
 from infrastructure.repositories.json_holiday_repository import JSONHolidayRepository
+from infrastructure.repositories.sql_order_repository import SQLOrderRepository
 
 # ============================================================
 # CONFIGURACIÓN DEL SERVIDOR MCP
@@ -32,6 +35,7 @@ mcp = FastMCP(MCP_SERVER_NAME)
 reservation_repo = SQLReservationRepository()
 table_repo = SQLTableRepository()
 holiday_repo = JSONHolidayRepository()
+order_repo = SQLOrderRepository()
 
 booking_service = BookingService(
     reservation_repo=reservation_repo,
@@ -45,6 +49,8 @@ table_service = TableService(
 )
 
 info_service = InformationService()
+
+order_service = OrderService(order_repo=order_repo)
 
 # ============================================================
 # EXPOSICIÓN DE FUNCIONALIDADES A MCP
@@ -98,6 +104,10 @@ def get_menu_info():
 
 # TODO: Añadir pedido a domicilio
 
+# @mcp.tool
+# def to_order(items: list, customer_phone: str, delivery_address: str):
+#     """Crea un nuevo pedido a domicilio."""
+#     order_service.create_order(13, items, 0.0, "pending", customer_phone, delivery_address)
 # mcp.tools {to_order, cancel_order}
 
 # REPOSITORIES: Habría que añaadir una sql_food_repository, además de una sql_delivery_guy_repository y una delivery_repository
