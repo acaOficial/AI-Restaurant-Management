@@ -20,10 +20,6 @@ class BookingService:
     def create_reservation(self, table_id: int, name: str, guests: int, date: str, time: str, phone: str):
         booking_date = BookingDate(date, time, self.holiday_repo)
 
-        reason = booking_date.get_invalid_reason()
-        if reason:
-            return {"success": False, "message": reason}
-
         # Debug: imprimir la fecha normalizada y buscar duplicados
         normalized = booking_date.normalized_date()
         # print(f"[DEBUG] create_reservation: fecha original='{date}', normalizada='{normalized}'")

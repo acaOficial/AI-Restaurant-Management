@@ -1,5 +1,6 @@
 import os
 from infrastructure.repositories.json_menu_repository import JSONMenuRepository
+from core.domain.booking_date import BookingDate
 
 OPEN_TIME = os.getenv("OPEN_TIME", "09:00")
 CLOSE_TIME = os.getenv("CLOSE_TIME", "00:00")
@@ -24,10 +25,17 @@ class InformationService:
 
         info += "🍲 *Platos:*\n"
         for dish in dishes:
-            info += f"{dish["id"]} - {dish["name"]}: {dish["price"]}€\n"
+            info += f"{dish['id']} - {dish['name']}: {dish['price']}€\n"
 
         info += "\n🍹 *Bebidas:*\n"
         for drink in drinks:
-            info += f"{drink["id"]} - {drink["name"]}: {drink["price"]}€\n"
+            info += f"{drink['id']} - {drink['name']}: {drink['price']}€\n"
         
         return info
+    
+    def is_open(self, date, time, holiday_repo) -> dict:
+        """Indica si el restaurante está abierto y devuelve la razón si está cerrado."""
+        booking_date = BookingDate(date, time, holiday_repo)
+        reason = booking_date.get_invalid_reason()
+        return reason
+        
