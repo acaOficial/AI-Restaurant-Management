@@ -107,6 +107,8 @@ def get_menu_info():
 # @mcp.tool
 # def to_order(items: list, customer_phone: str, delivery_address: str):
 #     """Crea un nuevo pedido a domicilio."""
+#     info_service.get_menu_info()    # Mostrar el menú antes de hacer el pedido
+#     # Buscar por ID los platos y bebidas para paserlos al servicio de pedidos
 #     order_service.create_order(13, items, 0.0, "pending", customer_phone, delivery_address)
 # mcp.tools {to_order, cancel_order}
 
