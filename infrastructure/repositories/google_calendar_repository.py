@@ -61,11 +61,11 @@ class GoogleCalendarRepository(CalendarRepository):
                 'description': description,
                 'start': {
                     'dateTime': start_datetime,
-                    'timeZone': 'Europe/Madrid',  # Ajustar según tu zona horaria
+                    'timeZone': 'Europe/London',
                 },
                 'end': {
                     'dateTime': end_datetime,
-                    'timeZone': 'Europe/Madrid',
+                    'timeZone': 'Europe/London',
                 },
             }
             
@@ -126,12 +126,12 @@ class GoogleCalendarRepository(CalendarRepository):
             if start_datetime:
                 event['start'] = {
                     'dateTime': start_datetime,
-                    'timeZone': 'Europe/Madrid',
+                    'timeZone': 'Europe/London',
                 }
             if end_datetime:
                 event['end'] = {
                     'dateTime': end_datetime,
-                    'timeZone': 'Europe/Madrid',
+                    'timeZone': 'Europe/London',
                 }
             
             # Guardar cambios

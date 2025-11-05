@@ -63,7 +63,7 @@ class BookingDate:
         
         if close_time == datetime.strptime("00:00", "%H:%M").time():
             return self.time >= open_time
-        
+        print(f"Comparando horas: {open_time} <= {self.time} <= {close_time}")
         return open_time <= self.time <= close_time
     
     def normalized_date(self) -> str:
