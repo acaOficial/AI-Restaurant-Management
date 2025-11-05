@@ -12,4 +12,4 @@ __pycache__/
 *.sqlite
 *.json
 
-/resources/token.pickle
+resources/token.pickle
