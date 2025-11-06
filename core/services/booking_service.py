@@ -21,7 +21,7 @@ class BookingService:
     # ============================================================
     # CREAR RESERVA
     # ============================================================
-    def create_reservation(self, table_id: int, name: str, guests: int, date: str, time: str, phone: str):
+    def create_reservation(self, table_id: int, name: str, guests: int, date: str, time: str, phone: str, notes: Optional[str] = None):
         booking_date = BookingDate(date, time, self.holiday_repo)
 
         # Debug: imprimir la fecha normalizada y buscar duplicados
@@ -48,7 +48,7 @@ class BookingService:
         
         # Usar la fecha normalizada para guardar en la base de datos
         # print(f"[DEBUG] create_reservation: creando reserva con fecha='{normalized}'")
-        reservation = Reservation(table_id, name, guests, normalized, time, phone, duration, calendar_event_id)
+        reservation = Reservation(table_id, name, guests, normalized, time, phone, duration, notes, calendar_event_id)
         self.reservation_repo.insert(reservation)
         
         message = f"Reserva creada con éxito (duración estimada: {duration} min)."

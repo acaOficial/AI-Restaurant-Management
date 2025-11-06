@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS reservations (
     time TEXT,
     phone TEXT,
     duration INTEGER,
+    notes TEXT,
     calendar_event_id TEXT,
     FOREIGN KEY(table_id) REFERENCES tables(id)
 )
