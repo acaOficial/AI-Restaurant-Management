@@ -1,5 +1,6 @@
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime, timedelta
+import json
 from core.domain.booking_date import BookingDate
 from core.domain.reservation import Reservation
 from core.domain.calendar_repository import CalendarRepository
@@ -21,37 +22,70 @@ class BookingService:
     # ============================================================
     # CREAR RESERVA
     # ============================================================
-    def create_reservation(self, table_id: int, name: str, guests: int, date: str, time: str, phone: str, notes: Optional[str] = None):
+    def create_reservation(
+        self, 
+        table_id: int, 
+        name: str, 
+        guests: int, 
+        date: str, 
+        time: str, 
+        phone: str, 
+        notes: Optional[str] = None,
+        merged_tables: Optional[List[int]] = None
+    ):
+        """
+        Crea una reserva. Puede ser para una mesa individual o mesas combinadas.
+        
+        Args:
+            table_id: ID de la mesa principal
+            merged_tables: Lista de IDs si son mesas combinadas (ej: [1, 2, 3])
+        """
         booking_date = BookingDate(date, time, self.holiday_repo)
-
-        # Debug: imprimir la fecha normalizada y buscar duplicados
         normalized = booking_date.normalized_date()
-        # print(f"[DEBUG] create_reservation: fecha original='{date}', normalizada='{normalized}'")
-        # print(f"[DEBUG] create_reservation: buscando duplicados con phone='{phone}', date='{normalized}'")
         
         existing = self.reservation_repo.find_by_phone_and_date(phone, normalized)
-        # print(f"[DEBUG] create_reservation: reservas encontradas={len(existing) if existing else 0}")
-        if existing:
-            print(f"[DEBUG] create_reservation: reservas existentes: {existing}")
-        
         if existing:
             return {"success": False, "message": f"Ya existe una reserva registrada con el número {phone} para el {normalized}."}
 
         duration = estimate_duration(guests, time)
-        if not self.table_repo.is_table_available(table_id, normalized, time, duration):
-            return {"success": False, "message": f"La mesa {table_id} no está disponible a las {time} el {normalized}."}
+        
+        # Verificar disponibilidad de todas las mesas (individual o combinadas)
+        tables_to_check = merged_tables if merged_tables else [table_id]
+        for tid in tables_to_check:
+            if not self.table_repo.is_table_available(tid, normalized, time, duration):
+                return {"success": False, "message": f"La mesa {tid} no está disponible a las {time} el {normalized}."}
 
         # Crear evento en Google Calendar si está configurado
         calendar_event_id = None
         if self.calendar_repo:
-            calendar_event_id = self._create_calendar_event(name, guests, normalized, time, duration, phone)
+            table_info = f"mesas {merged_tables}" if merged_tables else f"mesa {table_id}"
+            calendar_event_id = self._create_calendar_event(name, guests, normalized, time, duration, phone, table_info)
         
-        # Usar la fecha normalizada para guardar en la base de datos
-        # print(f"[DEBUG] create_reservation: creando reserva con fecha='{normalized}'")
-        reservation = Reservation(table_id, name, guests, normalized, time, phone, duration, notes, calendar_event_id)
+        # Convertir lista de mesas a JSON si existe
+        merged_tables_json = json.dumps(merged_tables) if merged_tables else None
+        
+        # Crear reserva
+        reservation = Reservation(
+            table_id=table_id,
+            name=name,
+            guests=guests,
+            date=normalized,
+            time=time,
+            phone=phone,
+            duration=duration,
+            notes=notes,
+            calendar_event_id=calendar_event_id,
+            merged_tables=merged_tables_json
+        )
         self.reservation_repo.insert(reservation)
         
-        message = f"Reserva creada con éxito (duración estimada: {duration} min)."
+        # Mensaje de confirmación
+        if merged_tables:
+            table_msg = f"mesas combinadas {merged_tables}"
+        else:
+            table_msg = f"mesa {table_id}"
+        
+        message = f"Reserva creada con éxito para {table_msg} (duración estimada: {duration} min)."
         if calendar_event_id:
             message += " Evento sincronizado con Google Calendar."
         
@@ -59,6 +93,7 @@ class BookingService:
             "success": True,
             "message": message,
             "table_id": table_id,
+            "merged_tables": merged_tables,
             "duration": duration,
             "calendar_event_id": calendar_event_id
         }
@@ -119,7 +154,16 @@ class BookingService:
     # ============================================================
     # MÉTODOS PRIVADOS PARA GOOGLE CALENDAR
     # ============================================================
-    def _create_calendar_event(self, name: str, guests: int, date: str, time: str, duration: int, phone: str) -> Optional[str]:
+    def _create_calendar_event(
+        self, 
+        name: str, 
+        guests: int, 
+        date: str, 
+        time: str, 
+        duration: int, 
+        phone: str,
+        table_info: str = None
+    ) -> Optional[str]:
         """Crea un evento en Google Calendar para la reserva."""
         try:
             # Construir fecha/hora en formato ISO 8601
@@ -128,6 +172,9 @@ class BookingService:
             
             title = f"Reserva: {name} ({guests} personas)"
             description = f"Reserva para {guests} personas\nTeléfono: {phone}\nDuración estimada: {duration} min"
+            
+            if table_info:
+                description += f"\n{table_info}"
             
             event_id = self.calendar_repo.create_event(
                 title=title,
