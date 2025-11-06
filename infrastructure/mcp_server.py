@@ -2,6 +2,7 @@ from fastmcp import FastMCP
 import sys
 import os
 from dotenv import load_dotenv
+from typing import Optional
 
 # Añadir el directorio raíz al path para los imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -67,9 +68,9 @@ info_service = InformationService()
 # ============================================================
 
 @mcp.tool
-def reserve_table(table_id: int, name: str, guests: int, date: str, time: str, phone: str):
-    """Crea una nueva reserva."""
-    return booking_service.create_reservation(table_id, name, guests, date, time, phone)
+def reserve_table(table_id: int, name: str, guests: int, date: str, time: str, phone: str, notes: Optional[str] = None):
+    """Crea una nueva reserva. El parámetro 'notes' es opcional y puede incluir aclaraciones especiales (ej: silla para bebés, alergia, etc)."""
+    return booking_service.create_reservation(table_id, name, guests, date, time, phone, notes)
 
 @mcp.tool
 def cancel_reservation(phone: str, date: str):

@@ -10,4 +10,5 @@ class Reservation:
     time: str
     phone: str
     duration: int
+    notes: Optional[str] = None
     calendar_event_id: Optional[str] = None
