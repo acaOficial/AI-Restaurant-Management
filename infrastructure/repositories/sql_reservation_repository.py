@@ -14,10 +14,11 @@ class SQLReservationRepository(IReservationRepository):
     def insert(self, reservation) -> None:
         """Inserta una nueva reserva."""
         execute("""
-            INSERT INTO reservations (table_id, name, guests, date, time, phone, duration)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO reservations (table_id, name, guests, date, time, phone, duration, notes, calendar_event_id, merged_tables)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (reservation.table_id, reservation.name, reservation.guests,
-              reservation.date, reservation.time, reservation.phone, reservation.duration))
+              reservation.date, reservation.time, reservation.phone, reservation.duration,
+              reservation.notes, reservation.calendar_event_id, reservation.merged_tables))
 
     def delete_by_phone_and_date(self, phone: str, date: str) -> None:
         """Elimina una reserva por teléfono y fecha."""

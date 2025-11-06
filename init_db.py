@@ -13,6 +13,11 @@ os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 conn = sqlite3.connect(DB_PATH)
 cur = conn.cursor()
 
+# Eliminar tablas existentes para recrearlas con la nueva estructura
+cur.execute("DROP TABLE IF EXISTS reservations")
+cur.execute("DROP TABLE IF EXISTS tables")
+cur.execute("DROP TABLE IF EXISTS orders")
+
 cur.execute("""
 CREATE TABLE IF NOT EXISTS tables (
     id INTEGER PRIMARY KEY,
@@ -32,6 +37,9 @@ CREATE TABLE IF NOT EXISTS reservations (
     time TEXT,
     phone TEXT,
     duration INTEGER,
+    notes TEXT,
+    calendar_event_id TEXT,
+    merged_tables TEXT,
     FOREIGN KEY(table_id) REFERENCES tables(id)
 )
 """)
@@ -52,10 +60,12 @@ cur.execute("DELETE FROM tables")
 cur.executemany(
     "INSERT INTO tables (id, capacity, location, available) VALUES (?, ?, ?, ?)",
     [
-        (1, 2, "interior", 1)
-        # (2, 4, "interior", 1),
-        # (3, 4, "terrace", 1),
-        # (4, 6, "interior", 1)
+        (1, 2, "interior", 1),
+        (2, 2, "interior", 1),
+        (3, 4, "interior", 1),
+        (4, 3, "terrace", 1),
+        (5, 3, "terrace", 1),
+        (6, 6, "interior", 1)
     ],
 )
 

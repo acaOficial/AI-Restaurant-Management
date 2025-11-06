@@ -2,6 +2,7 @@ from fastmcp import FastMCP
 import sys
 import os
 from dotenv import load_dotenv
+from typing import Optional
 
 # Añadir el directorio raíz al path para los imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -12,13 +13,12 @@ load_dotenv()
 # Importar dependencias de las capas correctas
 from core.services.booking_service import BookingService
 from core.services.table_service import TableService
-from core.services.order_service import OrderService
 from core.services.information_service import InformationService
 
 from infrastructure.repositories.sql_reservation_repository import SQLReservationRepository
 from infrastructure.repositories.sql_table_repository import SQLTableRepository
 from infrastructure.repositories.json_holiday_repository import JSONHolidayRepository
-from infrastructure.repositories.sql_order_repository import SQLOrderRepository
+from infrastructure.repositories.google_calendar_repository import GoogleCalendarRepository
 
 # ============================================================
 # CONFIGURACIÓN DEL SERVIDOR MCP
@@ -35,12 +35,25 @@ mcp = FastMCP(MCP_SERVER_NAME)
 reservation_repo = SQLReservationRepository()
 table_repo = SQLTableRepository()
 holiday_repo = JSONHolidayRepository()
-order_repo = SQLOrderRepository()
+
+# Configurar Google Calendar si está habilitado
+calendar_repo = None
+if os.getenv("GOOGLE_CALENDAR_ENABLED", "false").lower() == "true":
+    try:
+        calendar_repo = GoogleCalendarRepository(
+            calendar_id=os.getenv("GOOGLE_CALENDAR_ID", "primary"),
+            credentials_path=os.getenv("GOOGLE_CREDENTIALS_PATH", "resources/google_credentials.json")
+        )
+        print("✅ Google Calendar integrado correctamente")
+    except Exception as e:
+        print(f"⚠️ No se pudo conectar con Google Calendar: {e}")
+        print("   Las reservas se crearán sin sincronización de calendario")
 
 booking_service = BookingService(
     reservation_repo=reservation_repo,
     table_repo=table_repo,
-    holiday_repo=holiday_repo
+    holiday_repo=holiday_repo,
+    calendar_repo=calendar_repo
 )
 
 table_service = TableService(
@@ -50,16 +63,23 @@ table_service = TableService(
 
 info_service = InformationService()
 
-order_service = OrderService(order_repo=order_repo)
-
 # ============================================================
 # EXPOSICIÓN DE FUNCIONALIDADES A MCP
 # ============================================================
 
 @mcp.tool
-def reserve_table(table_id: int, name: str, guests: int, date: str, time: str, phone: str):
-    """Crea una nueva reserva."""
-    return booking_service.create_reservation(table_id, name, guests, date, time, phone)
+def reserve_table(table_id: int, name: str, guests: int, date: str, time: str, phone: str, notes: Optional[str] = None, merged_tables: Optional[str] = None):
+    """
+    Crea una nueva reserva. 
+    
+    Args:
+        table_id: ID de la mesa principal
+        merged_tables: JSON string con lista de IDs de mesas combinadas (ej: "[1,2,3]")
+        notes: Notas opcionales (ej: silla para bebés, alergia, etc)
+    """
+    import json
+    merged_list = json.loads(merged_tables) if merged_tables else None
+    return booking_service.create_reservation(table_id, name, guests, date, time, phone, notes, merged_list)
 
 @mcp.tool
 def cancel_reservation(phone: str, date: str):
@@ -79,7 +99,15 @@ def get_reservation(phone: str, date: str):
 
 @mcp.tool
 def find_table(guests: int, location: str, date: str, time: str):
-    """Busca mesas disponibles."""
+    """
+    Busca mesas disponibles. Si no hay una mesa individual suficiente,
+    automáticamente busca combinaciones de mesas en la misma ubicación.
+    
+    Returns:
+        - available_tables: Lista de mesas disponibles
+        - merged: True si es una combinación de mesas
+        - Si merged=True, la mesa incluirá 'table_ids' con los IDs a combinar
+    """
     return table_service.find_table(guests, location, date, time)
 
 @mcp.tool
@@ -105,26 +133,6 @@ def is_open(date: str, time: str):
 def get_opening_days():
     """Devuelve los días de apertura del restaurante."""
     return info_service.get_opening_days()
-
-@mcp.tool
-def get_menu_info():
-    """Devuelve información sobre el menú del restaurante."""
-    return info_service.get_menu_info()
-
-# TODO: Añadir pedido a domicilio
-
-# @mcp.tool
-# def to_order(items: list, customer_phone: str, delivery_address: str):
-#     """Crea un nuevo pedido a domicilio."""
-#     info_service.get_menu_info()    # Mostrar el menú antes de hacer el pedido
-#     # Buscar por ID los platos y bebidas para paserlos al servicio de pedidos
-#     order_service.create_order(13, items, 0.0, "pending", customer_phone, delivery_address)
-# mcp.tools {to_order, cancel_order}
-
-# REPOSITORIES: Habría que añaadir una sql_food_repository, además de una sql_delivery_guy_repository y una delivery_repository
-# DOMAIN: Mismos repositorios pero abstractos, además de las entidades Order, DeliveryGuy, FoodItem
-# SERVICES: DeliveryService, FoodService
-
 
 
 # ============================================================
