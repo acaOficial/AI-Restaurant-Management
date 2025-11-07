@@ -22,7 +22,7 @@ cur.execute("""
 CREATE TABLE IF NOT EXISTS tables (
     id INTEGER PRIMARY KEY,
     capacity INTEGER,
-    location TEXT CHECK(location IN ('interior', 'terrace')),
+    location TEXT CHECK(location IN ('interior', 'terrace'))
 )
 """)
 
@@ -57,14 +57,14 @@ CREATE TABLE IF NOT EXISTS orders (
 # Ejemplo de mesas
 cur.execute("DELETE FROM tables")
 cur.executemany(
-    "INSERT INTO tables (id, capacity, location, available) VALUES (?, ?, ?, ?)",
+    "INSERT INTO tables (id, capacity, location) VALUES (?, ?, ?)",
     [
-        (1, 2, "interior", 1),
-        (2, 2, "interior", 1),
-        (3, 4, "interior", 1),
-        (4, 3, "terrace", 1),
-        (5, 3, "terrace", 1),
-        (6, 6, "interior", 1)
+        (1, 2, "interior"),
+        (2, 2, "interior"),
+        (3, 4, "interior"),
+        (4, 3, "terrace"),
+        (5, 3, "terrace"),
+        (6, 6, "interior")
     ],
 )
 
