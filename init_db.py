@@ -23,7 +23,6 @@ CREATE TABLE IF NOT EXISTS tables (
     id INTEGER PRIMARY KEY,
     capacity INTEGER,
     location TEXT CHECK(location IN ('interior', 'terrace')),
-    available INTEGER
 )
 """)
 

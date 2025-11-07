@@ -11,6 +11,11 @@ class TableRepository(ABC):
         pass
     
     @abstractmethod
+    def get_table_by_id(self, table_id: int) -> Dict[str, Any]:
+        """Obtiene información de una mesa por su ID."""
+        pass
+    
+    @abstractmethod
     def is_table_available(self, table_id: int, date: str, time: str, duration: int) -> bool:
         """Verifica si una mesa está disponible en una fecha/hora específica."""
         pass

@@ -49,6 +49,32 @@ class BookingService:
 
         duration = estimate_duration(guests, time)
         
+        # Si hay mesas combinadas, verificar que todas sean de la misma ubicación y tengan capacidad suficiente
+        if merged_tables:
+            locations = []
+            total_capacity = 0
+            for tid in merged_tables:
+                table_info = self.table_repo.get_table_by_id(tid)
+                if not table_info:
+                    return {"success": False, "message": f"La mesa {tid} no existe."}
+                locations.append(table_info["location"])
+                total_capacity += table_info["capacity"]
+            
+            # Verificar que todas las mesas sean de la misma ubicación
+            if len(set(locations)) > 1:
+                return {"success": False, "message": f"No se pueden combinar mesas de diferentes ubicaciones (interior/terraza)."}
+            
+            # Verificar capacidad combinada
+            if total_capacity < guests:
+                return {"success": False, "message": f"La capacidad total de las mesas combinadas ({total_capacity}) es insuficiente para {guests} personas."}
+        else:
+            # Si es una mesa individual, verificar que tenga capacidad suficiente
+            table_info = self.table_repo.get_table_by_id(table_id)
+            if not table_info:
+                return {"success": False, "message": f"La mesa {table_id} no existe."}
+            if table_info["capacity"] < guests:
+                return {"success": False, "message": f"La mesa {table_id} tiene capacidad para {table_info['capacity']} personas, pero se solicitan {guests}. Usa find_table para buscar mesas disponibles."}
+        
         # Verificar disponibilidad de todas las mesas (individual o combinadas)
         tables_to_check = merged_tables if merged_tables else [table_id]
         for tid in tables_to_check:

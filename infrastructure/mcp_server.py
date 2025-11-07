@@ -3,6 +3,7 @@ import sys
 import os
 from dotenv import load_dotenv
 from typing import Optional
+import json
 
 # Añadir el directorio raíz al path para los imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -77,7 +78,6 @@ def reserve_table(table_id: int, name: str, guests: int, date: str, time: str, p
         merged_tables: JSON string con lista de IDs de mesas combinadas (ej: "[1,2,3]")
         notes: Notas opcionales (ej: silla para bebés, alergia, etc)
     """
-    import json
     merged_list = json.loads(merged_tables) if merged_tables else None
     return booking_service.create_reservation(table_id, name, guests, date, time, phone, notes, merged_list)
 

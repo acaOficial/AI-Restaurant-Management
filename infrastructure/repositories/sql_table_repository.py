@@ -15,6 +15,11 @@ class SQLTableRepository(ITableRepository):
             ORDER BY capacity ASC
         """, (location, guests))
 
+    def get_table_by_id(self, table_id: int) -> Dict[str, Any]:
+        """Obtiene información de una mesa por su ID."""
+        result = query("SELECT * FROM tables WHERE id = ?", (table_id,))
+        return result[0] if result else None
+
     def is_table_available(self, table_id: int, date: str, time: str, duration: int) -> bool:
         """Verifica si una mesa está disponible en una fecha/hora específica."""
         reservations = query("""
