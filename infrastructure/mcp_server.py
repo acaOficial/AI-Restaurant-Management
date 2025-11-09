@@ -3,6 +3,7 @@ import sys
 import os
 from dotenv import load_dotenv
 from typing import Optional
+import json
 
 # Añadir el directorio raíz al path para los imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -68,9 +69,17 @@ info_service = InformationService()
 # ============================================================
 
 @mcp.tool
-def reserve_table(table_id: int, name: str, guests: int, date: str, time: str, phone: str, notes: Optional[str] = None):
-    """Crea una nueva reserva. El parámetro 'notes' es opcional y puede incluir aclaraciones especiales (ej: silla para bebés, alergia, etc)."""
-    return booking_service.create_reservation(table_id, name, guests, date, time, phone, notes)
+def reserve_table(table_id: int, name: str, guests: int, date: str, time: str, phone: str, notes: Optional[str] = None, merged_tables: Optional[str] = None):
+    """
+    Crea una nueva reserva. 
+    
+    Args:
+        table_id: ID de la mesa principal
+        merged_tables: JSON string con lista de IDs de mesas combinadas (ej: "[1,2,3]")
+        notes: Notas opcionales (ej: silla para bebés, alergia, etc)
+    """
+    merged_list = json.loads(merged_tables) if merged_tables else None
+    return booking_service.create_reservation(table_id, name, guests, date, time, phone, notes, merged_list)
 
 @mcp.tool
 def cancel_reservation(phone: str, date: str):
@@ -90,7 +99,15 @@ def get_reservation(phone: str, date: str):
 
 @mcp.tool
 def find_table(guests: int, location: str, date: str, time: str):
-    """Busca mesas disponibles."""
+    """
+    Busca mesas disponibles. Si no hay una mesa individual suficiente,
+    automáticamente busca combinaciones de mesas en la misma ubicación.
+    
+    Returns:
+        - available_tables: Lista de mesas disponibles
+        - merged: True si es una combinación de mesas
+        - Si merged=True, la mesa incluirá 'table_ids' con los IDs a combinar
+    """
     return table_service.find_table(guests, location, date, time)
 
 @mcp.tool
