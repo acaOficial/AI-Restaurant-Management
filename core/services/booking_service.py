@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 import json
 from core.domain.booking_date import BookingDate
@@ -155,18 +155,71 @@ class BookingService:
     # MODIFICAR RESERVA
     # ============================================================
     def modify_reservation(self, phone: str, date: str, updates: dict):
+        """Modifica una reserva existente. Si cambia el número de comensales, busca una mesa óptima."""
         # Normalizar la fecha de búsqueda
         date = BookingDate(date, "00:00", self.holiday_repo).normalized_date()
         existing = self.reservation_repo.find_by_phone_and_date(phone, date)
         if not existing:
             return {"success": False, "message": f"No existe una reserva con el número {phone} para el {date}."}
         
+        reservation = existing[0]
+        
         # Normalizar la nueva fecha en updates si existe
         if "date" in updates:
             updates["date"] = BookingDate(updates["date"], "00:00", self.holiday_repo).normalized_date()
         
+        # Si cambia el número de comensales, buscar mesa óptima
+        if "guests" in updates:
+            new_guests = updates["guests"]
+            old_guests = reservation["guests"]
+            
+            if new_guests != old_guests:
+                # Solo reasignar mesa si HAY MÁS comensales
+                if new_guests > old_guests:
+                    # Verificar si la mesa actual es suficiente para más personas
+                    current_table = self.table_repo.get_table_by_id(reservation["table_id"])
+                    if not current_table:
+                        return {"success": False, "message": "Error: la mesa actual no existe."}
+                    
+                    # Si la mesa actual NO es suficiente, buscar una mejor
+                    if current_table["capacity"] < new_guests:
+                        # Obtener información de la reserva actual
+                        current_time = reservation["time"]
+                        current_date = reservation["date"]
+                        
+                        # Calcular duración para los nuevos comensales
+                        duration = estimate_duration(new_guests, current_time)
+                        
+                        location = current_table["location"]
+                        
+                        # Buscar mesa óptima para los nuevos comensales
+                        new_table_info = self._find_optimal_table(new_guests, location, current_date, current_time, duration, reservation["table_id"])
+                        
+                        if new_table_info["status"] == "single":
+                            # Hay una mesa individual disponible
+                            updates["table_id"] = new_table_info["table_id"]
+                            updates["merged_tables"] = None
+                            mesa_msg = f"Se reasignó a la mesa {new_table_info['table_id']}"
+                        elif new_table_info["status"] == "merged":
+                            # Hay que combinar mesas
+                            updates["table_id"] = new_table_info["table_ids"][0]
+                            updates["merged_tables"] = json.dumps(new_table_info["table_ids"])
+                            mesa_msg = f"Se reasignó a las mesas combinadas {new_table_info['table_ids']}"
+                        else:
+                            # No hay mesas disponibles
+                            return {"success": False, "message": f"No hay mesas disponibles en {location} para {new_guests} personas en esa fecha y hora."}
+                    else:
+                        # La mesa actual es suficiente, no reasignar
+                        mesa_msg = ""
+                else:
+                    # Si disminuyen los comensales, mantener la misma mesa
+                    mesa_msg = ""
+            else:
+                mesa_msg = ""
+        else:
+            mesa_msg = ""
+        
         # Actualizar evento en Google Calendar si existe
-        reservation = existing[0]
         if self.calendar_repo and reservation.get("calendar_event_id"):
             self._update_calendar_event(
                 reservation["calendar_event_id"],
@@ -175,7 +228,100 @@ class BookingService:
             )
         
         self.reservation_repo.update(phone, date, updates)
-        return {"success": True, "message": f"Reserva modificada con éxito."}
+        msg = f"Reserva modificada con éxito."
+        if mesa_msg:
+            msg += f" {mesa_msg}."
+        
+        return {"success": True, "message": msg}
+    
+    # ============================================================
+    # MÉTODO PRIVADO: BUSCAR MESA ÓPTIMA
+    # ============================================================
+    def _find_optimal_table(
+        self, 
+        guests: int, 
+        location: str, 
+        date: str, 
+        time: str, 
+        duration: int,
+        exclude_table_id: int = None
+    ) -> dict:
+        """
+        Busca la mesa óptima para los comensales.
+        Primero busca una mesa individual, si no hay, intenta combinar.
+        Excluye la mesa actual (exclude_table_id) de la búsqueda.
+        
+        Returns:
+            {
+                "status": "single|merged|unavailable",
+                "table_id": id (si single),
+                "table_ids": [ids] (si merged)
+            }
+        """
+        # 1. Buscar mesa individual
+        candidate_tables = self.table_repo.find_by_location_and_capacity(location, guests)
+        
+        available_tables = []
+        for table in candidate_tables:
+            # Excluir la mesa actual
+            if exclude_table_id and table["id"] == exclude_table_id:
+                continue
+            
+            if self.table_repo.is_table_available(table["id"], date, time, duration):
+                available_tables.append(table)
+        
+        if available_tables:
+            # Retornar la primera mesa disponible (la más pequeña que cabe)
+            return {
+                "status": "single",
+                "table_id": available_tables[0]["id"]
+            }
+        
+        # 2. Si no hay mesa individual, buscar combinación de mesas
+        all_tables = self.table_repo.find_by_location_and_capacity(location, 1)
+        
+        available_for_merge = []
+        for table in all_tables:
+            # Excluir la mesa actual
+            if exclude_table_id and table["id"] == exclude_table_id:
+                continue
+            
+            if self.table_repo.is_table_available(table["id"], date, time, duration):
+                available_for_merge.append(table)
+        
+        if not available_for_merge:
+            return {"status": "unavailable"}
+        
+        # Buscar mejor combinación
+        best_combination = self._find_best_combination_for_merge(available_for_merge, guests)
+        
+        if best_combination:
+            return {
+                "status": "merged",
+                "table_ids": [t["id"] for t in best_combination]
+            }
+        
+        return {"status": "unavailable"}
+    
+    def _find_best_combination_for_merge(self, tables: List[Dict[str, Any]], target_capacity: int) -> Optional[List[Dict[str, Any]]]:
+        """Encuentra la mejor combinación de mesas (mínimo número de mesas)."""
+        # Ordenar por capacidad descendente
+        tables_sorted = sorted(tables, key=lambda t: t["capacity"], reverse=True)
+        
+        # Intentar con 2 mesas
+        for i in range(len(tables_sorted)):
+            for j in range(i + 1, len(tables_sorted)):
+                if tables_sorted[i]["capacity"] + tables_sorted[j]["capacity"] >= target_capacity:
+                    return [tables_sorted[i], tables_sorted[j]]
+        
+        # Intentar con 3 mesas
+        for i in range(len(tables_sorted)):
+            for j in range(i + 1, len(tables_sorted)):
+                for k in range(j + 1, len(tables_sorted)):
+                    if tables_sorted[i]["capacity"] + tables_sorted[j]["capacity"] + tables_sorted[k]["capacity"] >= target_capacity:
+                        return [tables_sorted[i], tables_sorted[j], tables_sorted[k]]
+        
+        return None
     
     # ============================================================
     # MÉTODOS PRIVADOS PARA GOOGLE CALENDAR
