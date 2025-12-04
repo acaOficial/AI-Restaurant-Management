@@ -33,7 +33,7 @@ conda env create -f environment.yml
 conda activate restaurant-env
 ```
 
-### 2. Instalar ngrok
+### 3. Instalar ngrok
 
 Este proyecto depende de `ngrok`, un software que permite exponer la IP privada al exterior,
 para realizar las comunicaciones con la API de OpenAI. Por este motivo, es necesario realizar
@@ -68,7 +68,7 @@ Tras haber hecho esto, `ngrok` ya estaría completamente listo, un ejemplo de us
 ngrok http 8000
 ```
 
-### 3. Configurar la API Key de OpenAI
+### 4. Configurar la API Key de OpenAI
 
 Se dispone de un archivo `.env` en el que se podría introducir la API Key de OpenAI, sin embargo,
 es posible ignorar este archivo y establecer la API Key como variable de entorno. A continuación se
@@ -84,7 +84,7 @@ $env:OPENAI_API_KEY="tu-api-key-aqui"
 export OPENAI_API_KEY="tu-api-key-aqui"
 ```
 
-### 4. Configurar Google Calendar
+### 5. Configurar Google Calendar
 
 Este proyecto integra **Google Calendar** para sincronizar automáticamente las fechas de las reservas con un calendario de Google.
 
