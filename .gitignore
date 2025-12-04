@@ -1,4 +1,5 @@
 # Ignorar .env
+.env
 
 # Ignorar archivos compilados de Python
 *.pyc
