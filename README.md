@@ -14,7 +14,19 @@ Este proyecto implementa un sistema de reservas inteligente para restaurantes qu
 
 ## 🚀 Instalación
 
-### 1. Crear el entorno conda
+### 1. Clonar el repositorio
+
+```bash
+git clone git@github.com:acaOficial/AI-Restaurant-Management.git
+```
+
+Una vez clonado el repositorio, navegar hacia el directorio principal del proyecto
+
+```bash
+cd AI-Restaurant-Management
+```
+
+### 2. Crear el entorno conda
 
 ```bash
 conda env create -f environment.yml
@@ -399,4 +411,5 @@ Usuario → Client MCP → MCP Server → Booking Service → DB Repository → 
 - **Ngrok**: Túneles HTTP seguros.
 - **Pandas**: Análisis de datos (para check_db.py).
 - **Google Calendar**: Sincronizar el calendario con la fecha de resrva.
+
 
